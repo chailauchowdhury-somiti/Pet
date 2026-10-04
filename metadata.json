@@ -1,0 +1,8 @@
+{
+  "name": "PetMama - Modern Pet Care, Shop & Adoption",
+  "description": "A warm, modern home for everything pets need: products, adoption, and trusted veterinary care.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
