@@ -47,7 +47,13 @@ import {
   Instagram,
   Youtube,
   Linkedin,
-  Mail
+  Mail,
+  Settings,
+  LogOut,
+  UserPlus,
+  UserCheck,
+  MessageSquare,
+  Share2
 } from 'lucide-react';
 
 // Image assets generated for PetMama
@@ -83,7 +89,8 @@ type ActiveTab =
   | 'doctor'
   | 'privacy'
   | 'terms'
-  | 'return-policy';
+  | 'return-policy'
+  | 'profile';
 
 interface CartItem {
   id: string;
@@ -191,6 +198,34 @@ export default function App() {
   const [adoptDrawerOpen, setAdoptDrawerOpen] = useState(false);
   const [vetModalOpen, setVetModalOpen] = useState(false);
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
+
+  // User Profile & Authentication State (Matching User Requested UI)
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // default false so user can test sign-up/login flow
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'signup' | 'login'>('signup');
+  const [authNameInput, setAuthNameInput] = useState('Rahim Ahmed');
+  const [authEmailInput, setAuthEmailInput] = useState('rahim@gmail.com');
+  const [authPasswordInput, setAuthPasswordInput] = useState('petmama123');
+  const [authError, setAuthError] = useState('');
+  const [authToast, setAuthToast] = useState('');
+
+  // User Profile Info matching the screenshot
+  const [userProfile, setUserProfile] = useState({
+    name: 'Rahim Ahmed',
+    handle: '@rahim_pets',
+    location: 'Banani, Mohakhali',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=300', // Professional friendly portrait
+    badge: 'Premium Pet Parent',
+    bio: 'Caring for Bruno & Bella. Passionate about animal rescue in Dhaka.',
+    myPetsCount: 2,
+    petsFeedCount: 5,
+    vetVisitsCount: 12,
+    isFollowing: false
+  });
+
+  // Profile Active Sub-Tab: 'posts' | 'pets'
+  const [profileSubTab, setProfileSubTab] = useState<'posts' | 'pets'>('posts');
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 
   // Cart Animation & Interaction State
   const cartButtonRef = React.useRef<HTMLButtonElement>(null);
@@ -319,8 +354,7 @@ export default function App() {
   const [reportPostModal, setReportPostModal] = useState<ExplorePost | null>(null);
   const [reportReason, setReportReason] = useState<string>('Inappropriate Content or Language');
 
-  // User Auth & Daily Post Limit State
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  // Explore Post Daily Limit & Feedback State
   const [authPromptModalOpen, setAuthPromptModalOpen] = useState<boolean>(false);
   const [dailyLimitError, setDailyLimitError] = useState<string | null>(null);
   const [postSuccessMsg, setPostSuccessMsg] = useState<string | null>(null);
@@ -1216,6 +1250,52 @@ export default function App() {
     setCart(prev => prev.filter(item => item.id !== id));
   };
 
+  const handleGoogleAuth = () => {
+    setIsLoggedIn(true);
+    setAuthModalOpen(false);
+    setUserProfile(prev => ({
+      ...prev,
+      name: 'Rahim Ahmed',
+      handle: '@rahim_pets'
+    }));
+    setAuthToast('🎉 Successfully signed in with Google! Welcome to PetMama.');
+    setTimeout(() => setAuthToast(''), 5000);
+    navigateTo('profile');
+  };
+
+  const handleEmailAuth = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (authMode === 'signup' && !authNameInput.trim()) {
+      setAuthError('Please enter your full name');
+      return;
+    }
+    if (!authEmailInput.trim() || !authPasswordInput.trim()) {
+      setAuthError('Please enter email and password');
+      return;
+    }
+    setIsLoggedIn(true);
+    setAuthModalOpen(false);
+    setAuthError('');
+    if (authMode === 'signup' && authNameInput.trim()) {
+      setUserProfile(prev => ({
+        ...prev,
+        name: authNameInput.trim(),
+        handle: `@${authNameInput.trim().toLowerCase().replace(/\s+/g, '_')}`
+      }));
+    }
+    setAuthToast(`🎉 Welcome ${authNameInput.split(' ')[0]}! You are now logged in.`);
+    setTimeout(() => setAuthToast(''), 5000);
+    navigateTo('profile');
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setSettingsModalOpen(false);
+    setAuthToast('You have been logged out.');
+    setTimeout(() => setAuthToast(''), 4000);
+    navigateTo('home');
+  };
+
   const handleSellPetPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -1586,13 +1666,6 @@ export default function App() {
             >
               Care Plan
             </a>
-
-            <a
-              className={activeTab === 'about' ? 'active' : ''}
-              onClick={() => { navigateTo('about'); setMobileMenuOpen(false); }}
-            >
-              About Us
-            </a>
           </nav>
 
           {/* Right Header Actions */}
@@ -1613,11 +1686,49 @@ export default function App() {
               </span>
             </button>
 
+            {/* Contact Us Button */}
             <button
               className="header-cta desktop-only cursor-pointer"
               onClick={() => navigateTo('contact')}
             >
               Contact Us
+            </button>
+
+            {/* Profile Avatar Button (Beside Contact Us as requested) */}
+            <button
+              onClick={() => {
+                if (isLoggedIn) {
+                  navigateTo('profile');
+                } else {
+                  setAuthModalOpen(true);
+                }
+              }}
+              className={`flex items-center gap-2 p-1 pl-1 pr-3 rounded-full border transition-all cursor-pointer shadow-2xs hover:shadow-md ${
+                activeTab === 'profile'
+                  ? 'bg-[#E0F2F1] border-[#006978] ring-2 ring-[#006978]/30'
+                  : 'bg-white hover:bg-slate-50 border-[var(--line)]'
+              }`}
+              title={isLoggedIn ? `Profile: ${userProfile.name}` : "Sign In / Sign Up to PetMama"}
+            >
+              <div className="relative w-8 h-8 rounded-full overflow-hidden bg-slate-100 ring-2 ring-[#006978]/30 shrink-0">
+                {isLoggedIn ? (
+                  <img
+                    src={userProfile.avatar}
+                    alt={userProfile.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-slate-200 text-slate-600">
+                    <User className="w-4 h-4" />
+                  </div>
+                )}
+                {isLoggedIn && (
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-1.5 ring-white"></span>
+                )}
+              </div>
+              <span className="text-xs font-bold text-[var(--ink)] hidden md:inline">
+                {isLoggedIn ? userProfile.name.split(' ')[0] : 'Sign In'}
+              </span>
             </button>
 
             {/* Mobile menu toggle button */}
@@ -3746,6 +3857,354 @@ export default function App() {
               </p>
             </div>
           </div>
+        </main>
+      ) : activeTab === 'profile' ? (
+        /* 15. DEDICATED PROFILE PAGE (MATCHING USER SCREENSHOT) */
+        <main className="profile-full-page max-w-[620px] mx-auto px-[18px] md:px-[25px] py-10 animate-fadeIn">
+          {/* Back to Home Breadcrumb */}
+          <div className="mb-6 flex items-center justify-between">
+            <button
+              onClick={() => navigateTo('home')}
+              className="inline-flex items-center gap-2 text-xs font-bold text-[var(--coral-deep)] hover:underline bg-[var(--paper-deep)] px-4 py-2 rounded-full border border-[var(--line)] cursor-pointer"
+            >
+              ← Back to Home
+            </button>
+
+            {isLoggedIn && (
+              <button
+                onClick={handleLogout}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full border border-red-200 cursor-pointer transition-colors"
+                title="Sign Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </button>
+            )}
+          </div>
+
+          {/* Profile Header Title */}
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold font-editorial text-[var(--ink)] tracking-tight">
+              Profile
+            </h1>
+          </div>
+
+          {/* User Name, Handle, Location & Settings Icon */}
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-[var(--ink)] tracking-tight font-editorial">
+                {userProfile.name}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium flex items-center gap-1.5 mt-0.5">
+                <MapPin className="w-3.5 h-3.5 text-[#006978] shrink-0" />
+                <span>{userProfile.handle} • {userProfile.location}</span>
+              </p>
+            </div>
+
+            {/* Settings Gear Button */}
+            <button
+              onClick={() => setSettingsModalOpen(true)}
+              className="w-11 h-11 rounded-full bg-[#E0F2F1] hover:bg-[#b2dfdb] text-[#006978] flex items-center justify-center transition-all shadow-2xs cursor-pointer hover:rotate-45"
+              title="Edit Profile Settings"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* User Hero Card (Matching Screenshot) */}
+          <div className="bg-white border border-slate-200 rounded-[32px] p-5 sm:p-7 shadow-xs space-y-6">
+            {/* Avatar & Bio Row */}
+            <div className="flex items-start gap-4">
+              {/* Avatar with Verified Teal Checkmark Badge */}
+              <div className="relative shrink-0">
+                <img
+                  src={userProfile.avatar}
+                  alt={userProfile.name}
+                  className="w-20 h-20 sm:w-22 sm:h-22 rounded-full object-cover ring-3 ring-[#006978]/20 shadow-md"
+                />
+                <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-[#006978] text-white flex items-center justify-center ring-2 ring-white shadow-xs">
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                </div>
+              </div>
+
+              {/* Badge & Bio */}
+              <div className="space-y-2 flex-1 pt-1">
+                <span className="px-3 py-1 bg-[#FEF3C7] text-[#92400E] font-extrabold text-xs rounded-full inline-flex items-center gap-1.5 border border-[#FDE68A]">
+                  <span>🏅</span>
+                  <span>{userProfile.badge}</span>
+                </span>
+                <p className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed">
+                  {userProfile.bio}
+                </p>
+              </div>
+            </div>
+
+            {/* 3 Metric Stat Cards (2 My Pets, 5 Pets Feed, 12 Vet Visits) */}
+            <div className="grid grid-cols-3 gap-3">
+              {/* Card 1: My Pets (Soft Blue) */}
+              <div 
+                onClick={() => setProfileSubTab('pets')}
+                className="bg-[#EFF6FF] border border-[#DBEAFE] rounded-2xl p-3 sm:p-4 text-center cursor-pointer hover:shadow-xs transition-shadow"
+              >
+                <div className="text-2xl sm:text-3xl font-black text-[#1E40AF]">
+                  {userProfile.myPetsCount}
+                </div>
+                <div className="text-[11px] sm:text-xs font-extrabold text-[#3B82F6] mt-0.5">
+                  My Pets
+                </div>
+              </div>
+
+              {/* Card 2: Pets Feed (Soft Orange/Peach) */}
+              <div 
+                onClick={() => setProfileSubTab('posts')}
+                className="bg-[#FEF3C7] border border-[#FDE68A] rounded-2xl p-3 sm:p-4 text-center cursor-pointer hover:shadow-xs transition-shadow"
+              >
+                <div className="text-2xl sm:text-3xl font-black text-[#92400E]">
+                  {userProfile.petsFeedCount}
+                </div>
+                <div className="text-[11px] sm:text-xs font-extrabold text-[#D97706] mt-0.5">
+                  Pets Feed
+                </div>
+              </div>
+
+              {/* Card 3: Vet Visits (Soft Mint/Teal) */}
+              <div 
+                onClick={() => navigateTo('pet-care-plan')}
+                className="bg-[#E0F2F1] border border-[#B2DFDB] rounded-2xl p-3 sm:p-4 text-center cursor-pointer hover:shadow-xs transition-shadow"
+              >
+                <div className="text-2xl sm:text-3xl font-black text-[#004D40]">
+                  {userProfile.vetVisitsCount}
+                </div>
+                <div className="text-[11px] sm:text-xs font-extrabold text-[#006978] mt-0.5">
+                  Vet Visits
+                </div>
+              </div>
+            </div>
+
+            {/* 2 Action Buttons: Follow & Message */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <button
+                onClick={() => setUserProfile(prev => ({ ...prev, isFollowing: !prev.isFollowing }))}
+                className={`py-3 px-4 rounded-full font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                  userProfile.isFollowing
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                    : 'bg-[#006978] hover:bg-[#00525e] text-white'
+                }`}
+              >
+                {userProfile.isFollowing ? (
+                  <>
+                    <UserCheck className="w-4 h-4" />
+                    <span>Following</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4" />
+                    <span>Follow</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => alert(`Direct messaging with ${userProfile.name} is opened.`)}
+                className="py-3 px-4 bg-[#E0F2F1] hover:bg-[#b2dfdb] text-[#006978] rounded-full font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>Message</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Segmented Tabs Switcher: [ My Posts ] | [ My Pets ] */}
+          <div className="bg-[#F1F5F9] p-1.5 rounded-full flex items-center my-6 border border-slate-200">
+            <button
+              onClick={() => setProfileSubTab('posts')}
+              className={`flex-1 py-2.5 rounded-full font-extrabold text-xs sm:text-sm transition-all cursor-pointer text-center ${
+                profileSubTab === 'posts'
+                  ? 'bg-[#006978] text-white shadow-xs'
+                  : 'text-slate-600 hover:text-[var(--ink)]'
+              }`}
+            >
+              My Posts
+            </button>
+            <button
+              onClick={() => setProfileSubTab('pets')}
+              className={`flex-1 py-2.5 rounded-full font-extrabold text-xs sm:text-sm transition-all cursor-pointer text-center ${
+                profileSubTab === 'pets'
+                  ? 'bg-[#006978] text-white shadow-xs'
+                  : 'text-slate-600 hover:text-[var(--ink)]'
+              }`}
+            >
+              My Pets
+            </button>
+          </div>
+
+          {/* SUB-TAB 1: MY POSTS (MATCHING EXACT SCREENSHOT CARD) */}
+          {profileSubTab === 'posts' && (
+            <div className="space-y-6">
+              {/* Primary Published Post Card from Screenshot */}
+              <div className="bg-white border border-slate-200 rounded-[28px] p-5 sm:p-6 space-y-4 shadow-xs">
+                {/* Author Info & Badge */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150"
+                      alt="Sarah Jenkins"
+                      className="w-11 h-11 rounded-full object-cover border border-slate-200 shadow-2xs"
+                    />
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="font-extrabold text-sm text-[var(--ink)]">
+                          Sarah Jenkins
+                        </h4>
+                        <div className="w-4 h-4 rounded-full bg-[#006978] text-white flex items-center justify-center text-[9px]">
+                          <Check className="w-2.5 h-2.5 stroke-[3]" />
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-slate-500 font-medium">
+                        📍 Banani, Block D, 2 hrs ago
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Top Right Need Badge */}
+                  <span className="px-3 py-1 bg-[#E0F2F1] text-[#006978] border border-[#B2DFDB] font-extrabold text-[11px] rounded-full inline-flex items-center gap-1">
+                    <span>🏠</span>
+                    <span>Need a Home</span>
+                  </span>
+                </div>
+
+                {/* Tags Row: [ Cat ] [ Yes ] [ 4 Months ] */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-3 py-1 bg-[#006978] text-white text-[11px] font-bold rounded-full flex items-center gap-1">
+                    <PawPrint className="w-3 h-3 fill-current" /> Cat
+                  </span>
+                  <span className="px-3 py-1 bg-[#E0F2F1] text-[#006978] text-[11px] font-bold rounded-full flex items-center gap-1">
+                    <Check className="w-3 h-3 stroke-[3]" /> Yes
+                  </span>
+                  <span className="px-3 py-1 bg-[#FEF3C7] text-[#92400E] text-[11px] font-bold rounded-full flex items-center gap-1">
+                    <Calendar className="w-3 h-3" /> 4 Months
+                  </span>
+                </div>
+
+                {/* Description Text */}
+                <p className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed">
+                  Our neighborhood stray dog Bella just gave birth to 4 healthy puppies under the porch! 🐶💛 We urgently need puppy starter kibble & wet food packs for the nursing mother.
+                </p>
+
+                {/* Rescue Photo */}
+                <div className="rounded-2xl overflow-hidden aspect-[16/10] bg-slate-100 shadow-inner">
+                  <img
+                    src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&q=80&w=800"
+                    alt="Mother dog with puppies"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+
+                {/* Status Stack Bar: 7 offered food & 3 applied to adopt */}
+                <div className="p-3 bg-[#F8FAFC] border border-slate-200 rounded-2xl flex items-center justify-between flex-wrap gap-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="flex -space-x-2">
+                      <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100" className="w-6 h-6 rounded-full border border-white object-cover" alt="User" />
+                      <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100" className="w-6 h-6 rounded-full border border-white object-cover" alt="User" />
+                      <div className="w-6 h-6 rounded-full bg-[#006978] text-white text-[10px] font-bold flex items-center justify-center border border-white">
+                        +5
+                      </div>
+                    </div>
+                    <span className="font-extrabold text-slate-700">7 offered food</span>
+                  </div>
+
+                  <span className="px-3 py-1 bg-white border border-slate-200 text-slate-700 font-extrabold text-xs rounded-full shadow-2xs inline-flex items-center gap-1.5">
+                    <PawPrint className="w-3.5 h-3.5 text-[#006978]" />
+                    <span>3 applied to adopt</span>
+                  </span>
+                </div>
+
+                {/* Action Buttons: [ Offer Close ] [ Adopted ] */}
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <button
+                    onClick={() => alert('Food offering for this rescue post has been marked as closed.')}
+                    className="py-3 px-4 bg-[#FFF1F2] hover:bg-[#FFE4E6] text-[#E11D48] border border-[#FECDD3] rounded-2xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <span>⛔</span>
+                    <span>Offer Close</span>
+                  </button>
+
+                  <button
+                    onClick={() => alert('Congratulations! Post has been updated to Adopted status.')}
+                    className="py-3 px-4 bg-[#FFF7ED] hover:bg-[#FFEDD5] text-[#EA580C] border border-[#FED7AA] rounded-2xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <PawPrint className="w-3.5 h-3.5 fill-current" />
+                    <span>Adopted</span>
+                  </button>
+                </div>
+
+                {/* Footer Social Stats */}
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-bold">
+                  <div className="flex items-center gap-4">
+                    <span className="flex items-center gap-1 text-slate-600">
+                      <Heart className="w-4 h-4 text-rose-500 fill-rose-500" /> 42
+                    </span>
+                    <span className="flex items-center gap-1 text-slate-600">
+                      <MessageCircle className="w-4 h-4 text-[#006978]" /> 14
+                    </span>
+                  </div>
+                  <button 
+                    onClick={() => alert('Post link copied to clipboard!')}
+                    className="hover:text-[var(--ink)] cursor-pointer flex items-center gap-1"
+                  >
+                    <Share2 className="w-4 h-4" /> Share
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SUB-TAB 2: MY PETS */}
+          {profileSubTab === 'pets' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-extrabold text-base text-[var(--ink)]">
+                  Registered Companions ({myPetsList.length})
+                </h3>
+                <button
+                  onClick={() => {
+                    navigateTo('adopt');
+                    setCreatePostModalOpen(true);
+                  }}
+                  className="px-3.5 py-1.5 bg-[#006978] hover:bg-[#00525e] text-white font-extrabold text-xs rounded-full cursor-pointer shadow-2xs"
+                >
+                  + Add New Pet
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {myPetsList.map((pet) => (
+                  <div key={pet.id} className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-xs">
+                    <div className="aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 relative">
+                      <img src={pet.image} alt={pet.name} className="w-full h-full object-cover" />
+                      <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 bg-black/60 backdrop-blur-sm text-white font-bold text-[10px] rounded-full">
+                        {pet.type}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h4 className="font-extrabold text-base text-[var(--ink)]">{pet.name}</h4>
+                      <p className="text-xs text-slate-500">{pet.breed} · {pet.age}</p>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                      <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        {pet.vaccinationStatus}
+                      </span>
+                      <span className="text-[#006978] font-bold">
+                        Care: {pet.subscriptionMonths}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </main>
       ) : (
         /* MAIN LANDING PAGE VIEW */
@@ -7124,6 +7583,271 @@ export default function App() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* AUTHENTICATION MODAL: SIGN IN / SIGN UP (WITH GOOGLE SIGNUP & EMAIL) */}
+      {authModalOpen && (
+        <div 
+          className="fixed inset-0 z-[10050] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn cursor-pointer"
+          onClick={() => setAuthModalOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-[32px] max-w-md w-full p-6 sm:p-8 space-y-6 border border-slate-100 shadow-2xl relative animate-slideUp cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Close Button */}
+            <button
+              onClick={() => setAuthModalOpen(false)}
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors cursor-pointer"
+              title="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Brand Emblem & Welcome Header */}
+            <div className="text-center space-y-2">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-[#006978] text-white flex items-center justify-center text-2xl shadow-md">
+                <PawPrint className="w-7 h-7 fill-white" />
+              </div>
+              <h3 className="text-2xl sm:text-3xl font-bold font-editorial text-[var(--ink)]">
+                {authMode === 'signup' ? 'Create Your Account' : 'Welcome Back'}
+              </h3>
+              <p className="text-xs text-slate-500 font-medium max-w-xs mx-auto">
+                {authMode === 'signup'
+                  ? 'Join PetMama to connect with verified pet parents, save posts, and access personalized pet care.'
+                  : 'Log in to manage your registered pets, view orders, and connect with pet lovers.'}
+              </p>
+            </div>
+
+            {/* Switch Mode Tab Pill [ Sign Up ] | [ Sign In ] */}
+            <div className="bg-[#F1F5F9] p-1 rounded-full flex items-center border border-slate-200">
+              <button
+                type="button"
+                onClick={() => { setAuthMode('signup'); setAuthError(''); }}
+                className={`flex-1 py-2 rounded-full text-xs font-extrabold transition-all cursor-pointer text-center ${
+                  authMode === 'signup'
+                    ? 'bg-[#006978] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-[var(--ink)]'
+                }`}
+              >
+                Sign Up
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAuthMode('login'); setAuthError(''); }}
+                className={`flex-1 py-2 rounded-full text-xs font-extrabold transition-all cursor-pointer text-center ${
+                  authMode === 'login'
+                    ? 'bg-[#006978] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-[var(--ink)]'
+                }`}
+              >
+                Sign In
+              </button>
+            </div>
+
+            {/* Google One-Click Sign In/Up Button (Requested by user) */}
+            <button
+              type="button"
+              onClick={handleGoogleAuth}
+              className="w-full py-3.5 px-4 bg-white hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-300 text-slate-800 font-extrabold text-xs sm:text-sm rounded-full shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-3 cursor-pointer"
+            >
+              <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                />
+              </svg>
+              <span>{authMode === 'signup' ? 'Sign up with Google' : 'Sign in with Google'}</span>
+            </button>
+
+            {/* Divider */}
+            <div className="relative flex items-center justify-center">
+              <div className="w-full border-t border-slate-200"></div>
+              <span className="bg-white px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider absolute">
+                or with email
+              </span>
+            </div>
+
+            {/* Error message */}
+            {authError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl text-center animate-fadeIn">
+                ⚠️ {authError}
+              </div>
+            )}
+
+            {/* Email / Password Form */}
+            <form onSubmit={handleEmailAuth} className="space-y-4 text-xs">
+              {authMode === 'signup' && (
+                <div className="space-y-1">
+                  <label className="font-bold text-[var(--ink)] block">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={authNameInput}
+                    onChange={(e) => setAuthNameInput(e.target.value)}
+                    placeholder="e.g. Rahim Ahmed"
+                    className="w-full p-3.5 bg-[#F8FAFC] border border-slate-200 rounded-2xl font-semibold text-slate-900 focus:outline-none focus:border-[#006978] shadow-2xs"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="font-bold text-[var(--ink)] block">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={authEmailInput}
+                  onChange={(e) => setAuthEmailInput(e.target.value)}
+                  placeholder="name@example.com"
+                  className="w-full p-3.5 bg-[#F8FAFC] border border-slate-200 rounded-2xl font-semibold text-slate-900 focus:outline-none focus:border-[#006978] shadow-2xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-[var(--ink)] block">Password</label>
+                <input
+                  type="password"
+                  required
+                  value={authPasswordInput}
+                  onChange={(e) => setAuthPasswordInput(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full p-3.5 bg-[#F8FAFC] border border-slate-200 rounded-2xl font-semibold text-slate-900 focus:outline-none focus:border-[#006978] shadow-2xs"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-4 bg-[#006978] hover:bg-[#00525e] text-white font-extrabold text-sm rounded-full shadow-md hover:shadow-lg transition-all cursor-pointer mt-2"
+              >
+                {authMode === 'signup' ? 'Create PetMama Account →' : 'Sign In to Account →'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* SETTINGS / EDIT PROFILE MODAL */}
+      {settingsModalOpen && (
+        <div 
+          className="fixed inset-0 z-[10050] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn cursor-pointer"
+          onClick={() => setSettingsModalOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-[32px] max-w-md w-full p-6 sm:p-7 space-y-5 border border-slate-100 shadow-2xl relative animate-slideUp cursor-default max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setSettingsModalOpen(false)}
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors cursor-pointer"
+              title="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="space-y-1">
+              <span className="text-[10px] font-extrabold text-[#006978] uppercase tracking-wider bg-[#E0F2F1] px-3 py-1 rounded-full">
+                PROFILE SETTINGS
+              </span>
+              <h3 className="text-2xl font-bold font-editorial text-[var(--ink)]">
+                Edit Your Profile
+              </h3>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setSettingsModalOpen(false);
+                setAuthToast('✓ Profile updated successfully!');
+                setTimeout(() => setAuthToast(''), 4000);
+              }}
+              className="space-y-4 text-xs"
+            >
+              <div className="space-y-1">
+                <label className="font-bold text-[var(--ink)] block">Display Name</label>
+                <input
+                  type="text"
+                  required
+                  value={userProfile.name}
+                  onChange={(e) => setUserProfile({ ...userProfile, name: e.target.value })}
+                  className="w-full p-3 bg-[#F8FAFC] border border-slate-200 rounded-xl font-semibold text-slate-900"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-[var(--ink)] block">Username / Handle</label>
+                <input
+                  type="text"
+                  required
+                  value={userProfile.handle}
+                  onChange={(e) => setUserProfile({ ...userProfile, handle: e.target.value })}
+                  className="w-full p-3 bg-[#F8FAFC] border border-slate-200 rounded-xl font-semibold text-slate-900"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-[var(--ink)] block">Location</label>
+                <input
+                  type="text"
+                  required
+                  value={userProfile.location}
+                  onChange={(e) => setUserProfile({ ...userProfile, location: e.target.value })}
+                  className="w-full p-3 bg-[#F8FAFC] border border-slate-200 rounded-xl font-semibold text-slate-900"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-[var(--ink)] block">Bio & Passion</label>
+                <textarea
+                  rows={3}
+                  value={userProfile.bio}
+                  onChange={(e) => setUserProfile({ ...userProfile, bio: e.target.value })}
+                  className="w-full p-3 bg-[#F8FAFC] border border-slate-200 rounded-xl font-medium text-slate-900 resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSettingsModalOpen(false)}
+                  className="py-3 bg-slate-100 text-slate-700 font-bold rounded-full cursor-pointer hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="py-3 bg-[#006978] hover:bg-[#00525e] text-white font-bold rounded-full shadow-md transition-colors cursor-pointer"
+                >
+                  Save Changes ✓
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING TOAST NOTIFICATION */}
+      {authToast && (
+        <div className="fixed bottom-6 right-6 z-[10090] bg-[#1C2926] text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-500/40 animate-slideUp text-xs font-bold">
+          <span>{authToast}</span>
+          <button
+            onClick={() => setAuthToast('')}
+            className="text-slate-400 hover:text-white p-1 cursor-pointer font-bold"
+          >
+            ✕
+          </button>
         </div>
       )}
     </div>
