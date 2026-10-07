@@ -402,6 +402,20 @@ export default function App() {
   });
   const [lastOrderDetails, setLastOrderDetails] = useState<{ id: string; totalTK: number; date: string } | null>(null);
 
+  // User Profile Modal & Pet Ownership Transfer State
+  const [selectedUserProfile, setSelectedUserProfile] = useState<{
+    name: string;
+    handle: string;
+    location: string;
+    bio: string;
+    avatar: string;
+    posts: ExplorePost[];
+  } | null>(null);
+
+  const [transferPetModalOpen, setTransferPetModalOpen] = useState(false);
+  const [petToTransfer, setPetToTransfer] = useState<MyRegisteredPet | null>(null);
+  const [transferTargetUsername, setTransferTargetUsername] = useState('');
+
   // Adoption & Rehoming Feed state
   const [adoptionPosts, setAdoptionPosts] = useState<AdoptionPost[]>([
     {
@@ -1669,6 +1683,13 @@ export default function App() {
             >
               Care Plan
             </a>
+
+            <a
+              className={activeTab === 'contact' ? 'active font-bold text-[#006978]' : ''}
+              onClick={() => { navigateTo('contact'); setMobileMenuOpen(false); }}
+            >
+              Contact Us
+            </a>
           </nav>
 
           {/* Right Header Actions */}
@@ -2044,15 +2065,27 @@ export default function App() {
               >
                 {/* 1. Author Header Row */}
                 <div className="flex items-center justify-between gap-3 relative">
-                  <div className="flex items-center gap-3">
+                  <div 
+                    className="flex items-center gap-3 cursor-pointer group"
+                    onClick={() => {
+                      setSelectedUserProfile({
+                        name: post.authorName,
+                        handle: `@${post.authorName.toLowerCase().replace(/\s+/g, '_')}`,
+                        location: post.location,
+                        bio: `Passionate animal rescuer & pet parent in ${post.location}.`,
+                        avatar: post.authorAvatar,
+                        posts: explorePosts.filter(p => p.authorName === post.authorName)
+                      });
+                    }}
+                  >
                     <img
                       src={post.authorAvatar}
                       alt={post.authorName}
-                      className="w-11 h-11 rounded-full object-cover border-2 border-[var(--line)] shadow-2xs"
+                      className="w-11 h-11 rounded-full object-cover border-2 border-[var(--line)] shadow-2xs group-hover:border-[#006978] transition-colors"
                     />
                     <div>
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <h3 className="font-bold text-base text-[var(--ink)]">{post.authorName}</h3>
+                        <h3 className="font-bold text-base text-[var(--ink)] group-hover:text-[#006978] transition-colors">{post.authorName}</h3>
                         {post.isPinned && (
                           <span className="px-2 py-0.5 bg-amber-100 text-amber-800 font-extrabold text-[10px] rounded-full flex items-center gap-0.5 border border-amber-300">
                             <Pin className="w-3 h-3 fill-amber-700 text-amber-700" /> Pinned
@@ -4245,38 +4278,6 @@ export default function App() {
                 </div>
               </div>
             </div>
-
-            {/* 2 Action Buttons: Follow & Message */}
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <button
-                onClick={() => setUserProfile(prev => ({ ...prev, isFollowing: !prev.isFollowing }))}
-                className={`py-3 px-4 rounded-full font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs ${
-                  userProfile.isFollowing
-                    ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                    : 'bg-[#006978] hover:bg-[#00525e] text-white'
-                }`}
-              >
-                {userProfile.isFollowing ? (
-                  <>
-                    <UserCheck className="w-4 h-4" />
-                    <span>Following</span>
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="w-4 h-4" />
-                    <span>Follow</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={() => alert(`Direct messaging with ${userProfile.name} is opened.`)}
-                className="py-3 px-4 bg-[#E0F2F1] hover:bg-[#b2dfdb] text-[#006978] rounded-full font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span>Message</span>
-              </button>
-            </div>
           </div>
 
           {/* Segmented Tabs Switcher: [ My Posts ] | [ My Pets ] */}
@@ -4465,6 +4466,16 @@ export default function App() {
                         Care: {pet.subscriptionMonths}
                       </span>
                     </div>
+
+                    <button
+                      onClick={() => {
+                        setPetToTransfer(pet);
+                        setTransferPetModalOpen(true);
+                      }}
+                      className="w-full mt-2 py-2 bg-[#006978] hover:bg-[#00525e] text-white font-bold text-xs rounded-full transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                    >
+                      <span>Transfer Ownership</span>
+                    </button>
                   </div>
                 ))}
               </div>
@@ -4816,7 +4827,7 @@ export default function App() {
                       }}
                       className="w-full py-3 bg-white text-[#006978] hover:bg-teal-50 font-extrabold text-xs rounded-xl transition-colors cursor-pointer text-center shadow-sm"
                     >
-                      Buy Now (Offer Price)
+                      Buy Now
                     </button>
                   </div>
                 </div>
@@ -4870,7 +4881,7 @@ export default function App() {
                       }}
                       className="w-full py-3 bg-white text-[#006978] hover:bg-teal-50 font-extrabold text-xs rounded-xl transition-colors cursor-pointer text-center shadow-sm"
                     >
-                      Buy Now (Offer Price)
+                      Buy Now
                     </button>
                   </div>
                 </div>
@@ -4919,12 +4930,12 @@ export default function App() {
 
                     <button
                       onClick={() => {
-                        navigateTo('shop');
-                        setShopCategoryFilter('Medicine');
+                        const product = shopProducts.find(p => p.category === 'Medicine') || shopProducts[0];
+                        buyNowProduct(product);
                       }}
                       className="w-full py-3 bg-white text-[#006978] hover:bg-teal-50 font-extrabold text-xs rounded-xl transition-colors cursor-pointer text-center shadow-sm"
                     >
-                      Shop Medicine (Offer Price)
+                      Buy Now
                     </button>
                   </div>
                 </div>
@@ -8104,6 +8115,154 @@ export default function App() {
                   className="py-3 bg-[#006978] hover:bg-[#00525e] text-white font-bold rounded-full shadow-md transition-colors cursor-pointer"
                 >
                   Save Changes ✓
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* USER PROFILE MODAL (When clicking any user ID in Explore or Pet Circle) */}
+      {selectedUserProfile && (
+        <div 
+          className="fixed inset-0 z-[10070] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn cursor-pointer"
+          onClick={() => setSelectedUserProfile(null)}
+        >
+          <div 
+            className="bg-white rounded-[32px] max-w-xl w-full p-6 sm:p-8 space-y-6 border border-slate-100 shadow-2xl relative animate-slideUp cursor-default max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setSelectedUserProfile(null)}
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Profile Header */}
+            <div className="flex items-center gap-4">
+              <img src={selectedUserProfile.avatar} alt={selectedUserProfile.name} className="w-20 h-20 rounded-full object-cover ring-3 ring-[#006978]/20 shadow-md" />
+              <div>
+                <h2 className="text-2xl font-bold font-editorial text-[var(--ink)]">{selectedUserProfile.name}</h2>
+                <p className="text-xs text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+                  <MapPin className="w-3.5 h-3.5 text-[#006978]" />
+                  <span>{selectedUserProfile.handle} • {selectedUserProfile.location}</span>
+                </p>
+                <span className="mt-2 inline-block px-3 py-0.5 bg-[#FEF3C7] text-[#92400E] font-extrabold text-[10px] rounded-full border border-[#FDE68A]">
+                  Verified Pet Parent
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-700 font-medium leading-relaxed bg-[#F8FAFC] p-3.5 rounded-2xl border border-slate-200">
+              {selectedUserProfile.bio}
+            </p>
+
+            {/* Follow & Message Buttons */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <button
+                onClick={() => setAuthToast(`✓ Now following ${selectedUserProfile.name}!`)}
+                className="py-3 bg-[#006978] hover:bg-[#00525e] text-white font-extrabold text-xs rounded-full flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+              >
+                <UserPlus className="w-4 h-4" /> Follow
+              </button>
+              <button
+                onClick={() => setAuthToast(`💬 Chat opened with ${selectedUserProfile.name}`)}
+                className="py-3 bg-[#E0F2F1] hover:bg-[#b2dfdb] text-[#006978] font-extrabold text-xs rounded-full flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <MessageCircle className="w-4 h-4" /> Message
+              </button>
+            </div>
+
+            {/* User's Posts Section */}
+            <div className="space-y-3 pt-2 border-t border-slate-100">
+              <h4 className="text-xs font-extrabold text-[var(--ink)] uppercase tracking-wider">
+                Posts by {selectedUserProfile.name} ({selectedUserProfile.posts.length})
+              </h4>
+              <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                {selectedUserProfile.posts.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">No community posts published yet.</p>
+                ) : (
+                  selectedUserProfile.posts.map(p => (
+                    <div key={p.id} className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1.5">
+                      <div className="font-bold text-[var(--ink)]">{p.needBadge} · {p.petType}</div>
+                      <p className="text-slate-600 line-clamp-2">{p.description}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PET OWNERSHIP TRANSFER MODAL */}
+      {transferPetModalOpen && petToTransfer && (
+        <div 
+          className="fixed inset-0 z-[10080] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn cursor-pointer"
+          onClick={() => setTransferPetModalOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-[32px] max-w-md w-full p-6 sm:p-7 space-y-5 border border-slate-100 shadow-2xl relative animate-slideUp cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setTransferPetModalOpen(false)}
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="space-y-1">
+              <span className="text-[10px] font-extrabold text-[#006978] uppercase tracking-wider bg-[#E0F2F1] px-3 py-1 rounded-full">
+                PET OWNERSHIP TRANSFER
+              </span>
+              <h3 className="text-2xl font-bold font-editorial text-[var(--ink)]">
+                Transfer {petToTransfer.name}'s Ownership
+              </h3>
+              <p className="text-xs text-slate-500 font-medium">
+                Enter the username or full name of the new pet parent receiving ownership.
+              </p>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!transferTargetUsername.trim()) return;
+                setMyPetsList(prev => prev.filter(p => p.id !== petToTransfer.id));
+                setTransferPetModalOpen(false);
+                setAuthToast(`✓ Ownership of ${petToTransfer.name} successfully transferred to ${transferTargetUsername}!`);
+                setTimeout(() => setAuthToast(''), 4000);
+                setTransferTargetUsername('');
+                setPetToTransfer(null);
+              }}
+              className="space-y-4 text-xs"
+            >
+              <div className="space-y-1">
+                <label className="font-bold text-[var(--ink)] block">New Owner / Username</label>
+                <input
+                  type="text"
+                  required
+                  value={transferTargetUsername}
+                  onChange={(e) => setTransferTargetUsername(e.target.value)}
+                  placeholder="e.g. Sarah Jenkins or @sarah_j"
+                  className="w-full p-3.5 bg-[#F8FAFC] border border-slate-200 rounded-2xl font-semibold text-slate-900 focus:outline-none focus:border-[#006978]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setTransferPetModalOpen(false)}
+                  className="py-3 bg-slate-100 text-slate-700 font-bold rounded-full cursor-pointer hover:bg-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="py-3 bg-[#006978] hover:bg-[#00525e] text-white font-bold rounded-full shadow-md cursor-pointer"
+                >
+                  Confirm Transfer ➔
                 </button>
               </div>
             </form>
