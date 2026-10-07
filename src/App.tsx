@@ -90,7 +90,8 @@ type ActiveTab =
   | 'privacy'
   | 'terms'
   | 'return-policy'
-  | 'profile';
+  | 'profile'
+  | 'product-detail';
 
 interface CartItem {
   id: string;
@@ -389,6 +390,8 @@ export default function App() {
     }
   ]);
   const [shopCategoryFilter, setShopCategoryFilter] = useState<'All' | 'Food' | 'Cloths' | 'Dog' | 'Cat' | 'Rabbit' | 'Fish' | 'Toys' | 'Apparel' | 'Medicine'>('All');
+  const [selectedProduct, setSelectedProduct] = useState<ShopProduct | null>(null);
+  const [modalQty, setModalQty] = useState<number>(1);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [orderSuccessModalOpen, setOrderSuccessModalOpen] = useState(false);
   const [checkoutForm, setCheckoutForm] = useState({
@@ -1747,7 +1750,261 @@ export default function App() {
       <div className="h-20" aria-hidden="true" />
 
       {/* MAIN CONTENT PAGE CONDITION */}
-      {activeTab === 'explore' ? (
+      {activeTab === 'product-detail' && selectedProduct ? (
+        /* STANDALONE PRODUCT DETAILS PAGE (MATCHING REFERENCE UI) */
+        <main className="product-detail-full-page max-w-[950px] mx-auto px-4 py-8 animate-fadeIn space-y-8">
+          {/* Back to Shop Breadcrumb */}
+          <div>
+            <button
+              onClick={() => navigateTo('shop')}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--coral-deep)] hover:underline bg-[var(--paper-deep)] px-4 py-2 rounded-full border border-[var(--line)] cursor-pointer shadow-2xs"
+            >
+              ← Back to Shop
+            </button>
+          </div>
+
+          <div className="bg-white border border-[var(--line)] rounded-[28px] p-6 sm:p-8 shadow-xs">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+              {/* Left: Thumbnails Column + Main Image */}
+              <div className="md:col-span-6 flex gap-3 items-start">
+                {/* Thumbnail Column */}
+                <div className="flex flex-col gap-2.5 w-16 shrink-0">
+                  {[selectedProduct.image, ...shopProducts.filter(p => p.id !== selectedProduct.id).slice(0, 3).map(p => p.image)].map((imgUrl, idx) => (
+                    <div 
+                      key={idx}
+                      className="aspect-square rounded-xl overflow-hidden bg-slate-100 border-2 border-slate-200 hover:border-[#006978] cursor-pointer transition-all shadow-2xs"
+                    >
+                      <img src={imgUrl} alt={`Thumb ${idx}`} className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Main Product Image */}
+                <div className="flex-1 aspect-[4/3] sm:aspect-square rounded-[22px] overflow-hidden bg-[var(--paper-deep)] border border-slate-200 relative shadow-inner">
+                  <img
+                    src={selectedProduct.image}
+                    alt={selectedProduct.name}
+                    className="w-full h-full object-cover"
+                  />
+                  {selectedProduct.badge && (
+                    <span className="absolute top-3.5 left-3.5 px-3.5 py-1 bg-[#006978] text-white font-extrabold text-[10px] rounded-full uppercase tracking-wider shadow-md">
+                      {selectedProduct.badge}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Right: Info & Actions */}
+              <div className="md:col-span-6 space-y-4">
+                {/* Ratings */}
+                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600">
+                  <div className="flex items-center text-amber-400">
+                    {'★'.repeat(5)}
+                  </div>
+                  <span className="text-slate-800 font-extrabold">{selectedProduct.rating || '5.0'}</span>
+                </div>
+
+                <h1 className="text-base sm:text-lg font-extrabold text-[var(--ink)] leading-snug">
+                  {selectedProduct.name}
+                </h1>
+
+                <div className="text-2xl font-black text-[var(--ink)]">
+                  ৳{selectedProduct.priceTK.toLocaleString()} <span className="text-xs font-bold text-slate-400">TK</span>
+                </div>
+
+                {/* Action Buttons: Add to Cart, Buy it now, Favorite */}
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    onClick={(e) => {
+                      for(let i=0; i<modalQty; i++) {
+                        addToCart(selectedProduct, e);
+                      }
+                      setAuthToast(`✓ Added ${modalQty}x ${selectedProduct.name} to cart!`);
+                      setTimeout(() => setAuthToast(''), 4000);
+                    }}
+                    className="flex-1 py-3 px-5 bg-white hover:bg-[#E0F2F1] text-[#006978] border-2 border-[#006978] font-bold text-xs rounded-full shadow-2xs hover:shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <ShoppingBag className="w-4 h-4" />
+                    <span>Add to Cart</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      for(let i=0; i<modalQty; i++) {
+                        buyNowProduct(selectedProduct);
+                      }
+                    }}
+                    className="flex-1 py-3 px-5 bg-[#FF6B6B] hover:bg-[#fa5252] text-white font-bold text-xs rounded-full shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center"
+                  >
+                    <span>Buy it now</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setAuthToast(`♥ Added to your wishlist!`);
+                      setTimeout(() => setAuthToast(''), 3000);
+                    }}
+                    className="w-11 h-11 rounded-full border-2 border-slate-200 hover:border-[#FF6B6B] text-slate-400 hover:text-[#FF6B6B] flex items-center justify-center transition-colors cursor-pointer bg-white shadow-2xs shrink-0"
+                    title="Wishlist"
+                  >
+                    <Heart className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Quantity selector */}
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Quantity:</span>
+                  <div className="inline-flex items-center bg-[#F1F5F9] border border-slate-200 rounded-xl p-1">
+                    <button
+                      onClick={() => setModalQty(Math.max(1, modalQty - 1))}
+                      className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 flex items-center justify-center font-bold text-slate-800 shadow-2xs cursor-pointer"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="w-8 text-center font-extrabold text-xs text-[var(--ink)]">
+                      {modalQty}
+                    </span>
+                    <button
+                      onClick={() => setModalQty(modalQty + 1)}
+                      className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 flex items-center justify-center font-bold text-slate-800 shadow-2xs cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Colour options */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <div className="text-xs font-bold text-slate-700">
+                    Colour: <span className="font-extrabold text-[var(--ink)]">Natural / Signature</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-full bg-slate-200 border-2 border-white shadow-sm cursor-pointer" />
+                    <div className="w-7 h-7 rounded-full bg-[#006978] border-2 border-white shadow-sm cursor-pointer ring-2 ring-[#006978] flex items-center justify-center text-white text-[10px]">✓</div>
+                    <div className="w-7 h-7 rounded-full bg-[#FF6B6B] border-2 border-white shadow-sm cursor-pointer" />
+                    <div className="w-7 h-7 rounded-full bg-amber-200 border-2 border-white shadow-sm cursor-pointer" />
+                  </div>
+                </div>
+
+                {/* Delivery Information */}
+                <div className="flex items-center gap-2 text-xs font-medium text-slate-600 pt-1">
+                  <span>📅</span>
+                  <span>Delivery in 2–6 Hours (Express Delivery across Bangladesh)</span>
+                </div>
+
+                {/* Description */}
+                <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                  <h4 className="text-xs font-extrabold text-[var(--ink)] uppercase tracking-wider">Description:</h4>
+                  <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                    {selectedProduct.description} Crafted with premium ingredients and verified quality standards for maximum satisfaction and pet wellbeing.
+                  </p>
+                  <span className="text-[11px] font-bold text-[#006978] hover:underline cursor-pointer inline-block">See full description</span>
+                </div>
+
+                {/* Store / Seller info */}
+                <div className="flex items-center justify-between p-3.5 bg-[#F8FAFC] rounded-2xl border border-slate-200 pt-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#006978] text-white flex items-center justify-center font-black text-sm shadow-sm">
+                      PM
+                    </div>
+                    <div>
+                      <h5 className="font-extrabold text-xs text-[var(--ink)]">PetMama Official Store</h5>
+                      <p className="text-[10px] text-slate-500 font-medium">35,000+ followers</p>
+                    </div>
+                  </div>
+                  <button className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 text-[11px] font-bold rounded-full shadow-2xs cursor-pointer">
+                    Follow
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* REVIEWS & SIMILAR ITEMS SECTION */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+            {/* Left: Reviews (col-span-6) */}
+            <div className="md:col-span-6 bg-white border border-[var(--line)] rounded-[28px] p-6 space-y-5 shadow-xs">
+              <h3 className="text-base font-extrabold text-[var(--ink)]">Reviews</h3>
+              <div className="flex items-center gap-3">
+                <div className="text-2xl font-black text-[var(--ink)]">4.6</div>
+                <div className="flex items-center text-amber-400 text-sm">★★★★★</div>
+                <span className="text-xs text-slate-500 font-medium">(124 reviews)</span>
+              </div>
+
+              {/* Review Filter Pills */}
+              <div className="flex flex-wrap gap-1.5">
+                <span className="px-3 py-1 bg-slate-900 text-white font-bold text-[11px] rounded-full cursor-pointer">All (124)</span>
+                <span className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] rounded-full cursor-pointer">Photos (33)</span>
+                <span className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] rounded-full cursor-pointer">★★★★★ (98)</span>
+                <span className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] rounded-full cursor-pointer">★★★★☆ (22)</span>
+              </div>
+
+              {/* Review Items */}
+              <div className="space-y-4 pt-2 border-t border-slate-100">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-rose-200 text-rose-800 font-bold text-xs flex items-center justify-center">LB</div>
+                      <span className="font-extrabold text-xs text-[var(--ink)]">Lori Barnett</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-medium">02 May</span>
+                  </div>
+                  <div className="flex text-amber-400 text-xs">★★★★★</div>
+                  <p className="text-xs text-slate-600 font-medium">Amazing quality! My pet absolutely loved it and delivery was super fast.</p>
+                </div>
+
+                <div className="space-y-1.5 pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-sky-200 text-sky-800 font-bold text-xs flex items-center justify-center">PD</div>
+                      <span className="font-extrabold text-xs text-[var(--ink)]">Phillip Douglas</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-medium">29 April</span>
+                  </div>
+                  <div className="flex text-amber-400 text-xs">★★★★★</div>
+                  <p className="text-xs text-slate-600 font-medium">Authentic product guarantee is real. Very satisfied with the purchase.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Similar Items / Suggested Products (col-span-6) */}
+            <div className="md:col-span-6 bg-white border border-[var(--line)] rounded-[28px] p-6 space-y-4 shadow-xs">
+              <h3 className="text-base font-extrabold text-[var(--ink)]">Similar items:</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
+                {shopProducts
+                  .filter(p => p.id !== selectedProduct.id)
+                  .slice(0, 4)
+                  .map((prod) => (
+                    <div
+                      key={prod.id}
+                      onClick={() => {
+                        setSelectedProduct(prod);
+                        setModalQty(1);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="bg-[#F8FAFC] border border-slate-200 rounded-[20px] p-3 space-y-2.5 shadow-2xs hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                    >
+                      <div className="space-y-2">
+                        <div className="aspect-[4/3] rounded-xl overflow-hidden bg-white relative border border-slate-200">
+                          <img src={prod.image} alt={prod.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        </div>
+                        <h4 className="font-bold text-xs text-[var(--ink)] line-clamp-1 group-hover:text-[#006978] transition-colors">{prod.name}</h4>
+                      </div>
+                      <div className="flex items-center justify-between pt-1.5 border-t border-slate-200">
+                        <span className="text-xs font-black text-[var(--ink)]">
+                          ৳{prod.priceTK.toLocaleString()} <span className="text-[9px] text-slate-400">TK</span>
+                        </span>
+                        <span className="text-[9px] font-bold text-[#006978] bg-[#E0F2F1] px-2 py-0.5 rounded-full">
+                          View
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        </main>
+      ) : activeTab === 'explore' ? (
         /* EXPLORE COMMUNITY POSTS FEED PAGE (MATCHING screenshot 1, 2, 3) */
         <main className="explore-feed-page max-w-[820px] mx-auto px-4 md:px-6 py-8 animate-fadeIn">
           {/* Breadcrumb & Top Bar */}
@@ -3275,9 +3532,17 @@ export default function App() {
                 .filter(p => isProductInFilter(p, shopCategoryFilter))
                 .map((product) => (
                   <div key={product.id} className="bg-white border border-[var(--line)] rounded-[24px] p-5 space-y-4 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between">
-                    <div className="space-y-3">
+                    <div 
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setModalQty(1);
+                        setActiveTab('product-detail');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="space-y-3 cursor-pointer group"
+                    >
                       <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-[var(--paper-deep)] relative">
-                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                        <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                         {product.badge && (
                           <span className="absolute top-3 left-3 px-2.5 py-0.5 bg-[#006978] text-white text-[10px] font-bold rounded-full uppercase tracking-wider shadow-sm">
                             {product.badge}
@@ -3293,8 +3558,8 @@ export default function App() {
                             <Star className="w-3.5 h-3.5 fill-amber-400" /> {product.rating}
                           </span>
                         </div>
-                        <h4 className="font-bold text-base text-[var(--ink)] mt-1.5">{product.name}</h4>
-                        <p className="text-xs text-[var(--muted-ink)] mt-1 leading-relaxed">{product.description}</p>
+                        <h4 className="font-bold text-base text-[var(--ink)] mt-1.5 group-hover:text-[#006978] transition-colors">{product.name}</h4>
+                        <p className="text-xs text-[var(--muted-ink)] mt-1 leading-relaxed line-clamp-2">{product.description}</p>
                       </div>
                     </div>
 
@@ -4293,7 +4558,15 @@ export default function App() {
                     key={product.id}
                     className="bg-white border border-[#E7EBE9] hover:border-[#006978]/40 rounded-[24px] p-3.5 sm:p-4 flex flex-col justify-between shadow-xs hover:shadow-lg transition-all duration-300 group"
                   >
-                    <div className="space-y-3">
+                    <div 
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setModalQty(1);
+                        setActiveTab('product-detail');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="space-y-3 cursor-pointer group"
+                    >
                       {/* Product Image Container */}
                       <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-[var(--paper-deep)] relative">
                         <img
